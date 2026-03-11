@@ -64,7 +64,7 @@ export function polyToLatex(p: Polynomial, variable: string = "s"): string {
   const terms: string[] = [];
   for (let i = n; i >= 0; i--) {
     const c = p.coeffs[i];
-    if (Math.abs(c) < 1e-14) continue;
+    if (c === 0) continue;
     const absC = Math.abs(c);
     const sign = c >= 0 ? "+" : "-";
     let coefStr: string;
@@ -92,8 +92,8 @@ export function polyToLatex(p: Polynomial, variable: string = "s"): string {
 
 export function formatCoef(c: number): string {
   if (c === 0) return "0";
-  // Small integers: display directly
-  if (c < 1e4 && Math.abs(c - Math.round(c)) < 1e-6) {
+  // Small integers: display directly (must be >= 1 to avoid catching tiny floats)
+  if (c >= 1 && c < 1e4 && Math.abs(c - Math.round(c)) < 1e-6) {
     return Math.round(c).toString();
   }
   // Large or small numbers: scientific notation in LaTeX

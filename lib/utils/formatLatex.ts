@@ -20,7 +20,7 @@ function zInvPolyToLatex(coeffs: number[]): string {
   const terms: string[] = [];
   for (let k = 0; k < coeffs.length; k++) {
     const c = coeffs[k];
-    if (Math.abs(c) < 1e-14) continue;
+    if (c === 0) continue;
     const absC = Math.abs(c);
     const sign = c >= 0 ? "+" : "-";
 

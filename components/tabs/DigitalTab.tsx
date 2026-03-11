@@ -137,11 +137,14 @@ export default function DigitalTab({
     ? "Frequency (Hz)"
     : "\u03c9 (rad/sample)";
 
+  const nyquist = useHz ? fs / 2 : Math.PI;
   const userFreqRange = parseRange(ranges.freqMin, ranges.freqMax);
   const magRange = parseRange(ranges.magMin, ranges.magMax);
   const phaseRange = parseRange(ranges.phaseMin, ranges.phaseMax);
-  // Default axis: 0 to Fs/2 (Hz) or 0 to pi (normalized)
-  const freqRange = userFreqRange ?? (useHz ? [0, fs / 2] : [0, Math.PI]);
+  // Clamp frequency range to [0, Nyquist] — digital response is only unique in this band
+  const freqRange: [number, number] = userFreqRange
+    ? [Math.max(0, Math.min(userFreqRange[0], nyquist)), Math.min(userFreqRange[1], nyquist)]
+    : [0, nyquist];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 p-4">

@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+:root {
+  --bg: #ffffff;
+  --bg-secondary: #f9fafb;
+  --text: #111827;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --panel: #ffffff;
+  --plot-bg: #ffffff;
+  --plot-grid: #e5e7eb;
+  --plot-text: #374151;
+}
+
+.dark {
+  --bg: #0f172a;
+  --bg-secondary: #1e293b;
+  --text: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border: #334155;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --panel: #1e293b;
+  --plot-bg: #1e293b;
+  --plot-grid: #334155;
+  --plot-text: #e2e8f0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Fix react-katex inline display */
+.katex-display {
+  margin: 0 !important;
+}

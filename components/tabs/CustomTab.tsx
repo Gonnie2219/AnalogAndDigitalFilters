@@ -1,0 +1,86 @@
+"use client";
+import MagnitudeTable from "@/components/panels/MagnitudeTable";
+import TransferFunctionDisplay from "@/components/panels/TransferFunctionDisplay";
+import FrequencyResponsePlots from "@/components/panels/FrequencyResponsePlots";
+import PoleZeroMap from "@/components/panels/PoleZeroMap";
+import NumberInput from "@/components/ui/NumberInput";
+import AxisControls, { AxisRanges } from "@/components/panels/AxisControls";
+import { MagnitudeTarget, CustomFitResult } from "@/lib/optimization/customFit";
+import { useState } from "react";
+
+interface CustomTabProps {
+  dark: boolean;
+  targets: MagnitudeTarget[];
+  onTargetsChange: (targets: MagnitudeTarget[]) => void;
+  numPoles: number;
+  onNumPolesChange: (n: number) => void;
+  result: CustomFitResult | null;
+  running: boolean;
+  onRun: () => void;
+}
+
+const defaultRanges: AxisRanges = {
+  freqMin: "", freqMax: "",
+  magMin: "", magMax: "",
+  phaseMin: "", phaseMax: "",
+};
+
+export default function CustomTab({
+  dark, targets, onTargetsChange, numPoles, onNumPolesChange, result, running, onRun,
+}: CustomTabProps) {
+  const [useHz, setUseHz] = useState(true);
+  const [magDb, setMagDb] = useState(true);
+  const [ranges, setRanges] = useState<AxisRanges>(defaultRanges);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 p-4">
+      <div className="space-y-4">
+        <MagnitudeTable targets={targets} onChange={onTargetsChange} />
+        <div className="p-4 rounded-lg bg-[var(--panel)] border border-[var(--border)] space-y-3">
+          <NumberInput
+            label="Number of Poles"
+            value={numPoles}
+            onChange={(v) => onNumPolesChange(Math.max(1, Math.min(10, Math.round(v))))}
+            min={1}
+            max={10}
+            step={1}
+          />
+          <button
+            onClick={onRun}
+            disabled={running || targets.length < 2}
+            className="w-full py-2 text-sm rounded bg-[var(--accent)] text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {running ? "Optimizing..." : "Optimize"}
+          </button>
+          {result && (
+            <p className="text-xs text-[var(--text-secondary)]">
+              Fit error: {result.error.toExponential(3)}
+            </p>
+          )}
+        </div>
+        {result && (
+          <PoleZeroMap poles={result.tf.poles} zeros={result.tf.zeros} dark={dark} />
+        )}
+      </div>
+      <div className="space-y-4">
+        {result && <TransferFunctionDisplay tf={result.tf} />}
+        <AxisControls
+          useHz={useHz} onToggleHz={() => setUseHz(!useHz)}
+          magDb={magDb} onToggleMagDb={() => setMagDb(!magDb)}
+          ranges={ranges} onRangeChange={setRanges}
+        />
+        {result && (
+          <FrequencyResponsePlots
+            response={result.response} dark={dark}
+            useHz={useHz} magDb={magDb} ranges={ranges}
+          />
+        )}
+        {!result && (
+          <div className="flex items-center justify-center h-64 text-[var(--text-secondary)]">
+            Add magnitude targets and click Optimize
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

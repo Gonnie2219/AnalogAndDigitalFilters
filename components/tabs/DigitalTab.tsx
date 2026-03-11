@@ -11,7 +11,7 @@ import {
 import { digitalTfToLatex } from "@/lib/utils/formatLatex";
 import { radToHz, hzToRad } from "@/lib/utils/units";
 import PoleZeroMap from "@/components/panels/PoleZeroMap";
-import AxisControls, { AxisRanges } from "@/components/panels/AxisControls";
+import AxisControls, { AxisRanges, SuggestedDefaults } from "@/components/panels/AxisControls";
 import NumberInput from "@/components/ui/NumberInput";
 import Plot from "@/components/plot/PlotlyWrapper";
 import "katex/dist/katex.min.css";
@@ -223,6 +223,11 @@ export default function DigitalTab({
           ranges={ranges}
           onRangeChange={setRanges}
           maxFreq={nyquist}
+          suggestedDefaults={{
+            freqMin: 0, freqMax: nyquist,
+            magMin: magDb ? -100 : 0, magMax: magDb ? 5 : 1.5,
+            phaseMin: -270, phaseMax: 0,
+          }}
         />
 
         {/* Frequency response plots */}

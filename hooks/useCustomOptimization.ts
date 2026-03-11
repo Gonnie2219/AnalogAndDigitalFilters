@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { MagnitudeTarget, CustomFitResult, customFit } from "@/lib/optimization/customFit";
 import { hzToRad } from "@/lib/utils/units";
 
@@ -14,10 +14,14 @@ export function useCustomOptimization() {
   const [numPoles, setNumPoles] = useState(4);
   const [result, setResult] = useState<CustomFitResult | null>(null);
   const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const runningRef = useRef(false);
 
   const run = useCallback(() => {
-    if (targets.length < 2) return;
+    if (targets.length < 2 || runningRef.current) return;
+    runningRef.current = true;
     setRunning(true);
+    setError(null);
     // Run async to not block UI
     setTimeout(() => {
       try {
@@ -25,10 +29,13 @@ export function useCustomOptimization() {
         setResult(res);
       } catch (e) {
         console.error("Optimization error:", e);
+        setResult(null);
+        setError(e instanceof Error ? e.message : "Optimization failed");
       }
       setRunning(false);
+      runningRef.current = false;
     }, 10);
   }, [targets, numPoles]);
 
-  return { targets, setTargets, numPoles, setNumPoles, result, running, run };
+  return { targets, setTargets, numPoles, setNumPoles, result, running, error, run };
 }

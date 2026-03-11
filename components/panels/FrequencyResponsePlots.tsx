@@ -19,6 +19,40 @@ function parseRange(min: string, max: string): [number, number] | undefined {
   return undefined;
 }
 
+/** Format a number with SI prefix (e.g. 5000 → "5k", 2000000 → "2M") */
+function formatSI(value: number): string {
+  if (value >= 1e9) return `${value / 1e9}G`;
+  if (value >= 1e6) return `${value / 1e6}M`;
+  if (value >= 1e3) return `${value / 1e3}k`;
+  if (value < 1 && value > 0) return String(Math.round(value * 1000) / 1000);
+  return String(value);
+}
+
+/** Generate explicit tick positions + SI-prefixed labels for a log frequency axis */
+function generateLogTicks(minVal: number, maxVal: number): { tickvals: number[]; ticktext: string[] } {
+  const safeMin = Math.max(minVal, 1e-10);
+  const minExp = Math.floor(Math.log10(safeMin));
+  const maxExp = Math.ceil(Math.log10(maxVal));
+  const numDecades = maxExp - minExp;
+
+  // Fewer sub-decade ticks for wide ranges to avoid clutter
+  const steps = numDecades <= 4 ? [1, 2, 5] : numDecades <= 5 ? [1, 5] : [1];
+
+  const tickvals: number[] = [];
+  const ticktext: string[] = [];
+
+  for (let exp = minExp; exp <= maxExp; exp++) {
+    for (const s of steps) {
+      const val = s * Math.pow(10, exp);
+      if (val >= safeMin * 0.5 && val <= maxVal * 2) {
+        tickvals.push(val);
+        ticktext.push(formatSI(val));
+      }
+    }
+  }
+  return { tickvals, ticktext };
+}
+
 export default function FrequencyResponsePlots({ response, dark, useHz, magDb, ranges }: FrequencyResponsePlotsProps) {
   const bgColor = dark ? "#1e293b" : "#ffffff";
   const gridColor = dark ? "#334155" : "#e5e7eb";
@@ -37,8 +71,13 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
 
   // For log axis, Plotly needs log10 of the range values
   const xRange = freqRange
-    ? [Math.log10(freqRange[0]), Math.log10(freqRange[1])]
+    ? [Math.log10(Math.max(freqRange[0], 1e-6)), Math.log10(freqRange[1])]
     : undefined;
+
+  // Generate SI-prefixed tick labels covering the visible range
+  const tickMin = freqRange ? freqRange[0] : freqs[0];
+  const tickMax = freqRange ? freqRange[1] : freqs[freqs.length - 1];
+  const { tickvals, ticktext } = generateLogTicks(tickMin, tickMax);
 
   const commonLayout = {
     paper_bgcolor: bgColor,
@@ -47,9 +86,12 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
     margin: { l: 60, r: 20, t: 10, b: 40 },
     xaxis: {
       type: "log" as const,
+      tickmode: "array" as const,
       title: { text: freqLabel },
       gridcolor: gridColor,
       linecolor: gridColor,
+      tickvals,
+      ticktext,
       ...(xRange && { range: xRange }),
     },
   };

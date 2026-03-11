@@ -4,9 +4,10 @@ import TransferFunctionDisplay from "@/components/panels/TransferFunctionDisplay
 import FrequencyResponsePlots from "@/components/panels/FrequencyResponsePlots";
 import PoleZeroMap from "@/components/panels/PoleZeroMap";
 import NumberInput from "@/components/ui/NumberInput";
-import AxisControls, { AxisRanges } from "@/components/panels/AxisControls";
+import AxisControls, { AxisRanges, SuggestedDefaults } from "@/components/panels/AxisControls";
 import { MagnitudeTarget, CustomFitResult } from "@/lib/optimization/customFit";
-import { useState } from "react";
+import { radToHz } from "@/lib/utils/units";
+import { useMemo, useState } from "react";
 
 interface CustomTabProps {
   dark: boolean;
@@ -16,6 +17,7 @@ interface CustomTabProps {
   onNumPolesChange: (n: number) => void;
   result: CustomFitResult | null;
   running: boolean;
+  error: string | null;
   onRun: () => void;
 }
 
@@ -26,11 +28,26 @@ const defaultRanges: AxisRanges = {
 };
 
 export default function CustomTab({
-  dark, targets, onTargetsChange, numPoles, onNumPolesChange, result, running, onRun,
+  dark, targets, onTargetsChange, numPoles, onNumPolesChange, result, running, error, onRun,
 }: CustomTabProps) {
   const [useHz, setUseHz] = useState(true);
   const [magDb, setMagDb] = useState(true);
   const [ranges, setRanges] = useState<AxisRanges>(defaultRanges);
+
+  const suggestedDefaults = useMemo<SuggestedDefaults>(() => {
+    if (targets.length === 0) return {};
+    const freqs = targets.map((t) => useHz ? radToHz(t.frequency) : t.frequency);
+    const fMin = Math.min(...freqs);
+    const fMax = Math.max(...freqs);
+    return {
+      freqMin: fMin / 10,
+      freqMax: fMax * 10,
+      magMin: magDb ? -100 : 0,
+      magMax: magDb ? 5 : 1.5,
+      phaseMin: -270,
+      phaseMax: 0,
+    };
+  }, [targets, useHz, magDb]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 p-4">
@@ -52,6 +69,9 @@ export default function CustomTab({
           >
             {running ? "Optimizing..." : "Optimize"}
           </button>
+          {error && (
+            <p className="text-xs text-red-500">{error}</p>
+          )}
           {result && (
             <p className="text-xs text-[var(--text-secondary)]">
               Fit error: {result.error.toExponential(3)}
@@ -68,6 +88,7 @@ export default function CustomTab({
           useHz={useHz} onToggleHz={() => setUseHz(!useHz)}
           magDb={magDb} onToggleMagDb={() => setMagDb(!magDb)}
           ranges={ranges} onRangeChange={setRanges}
+          suggestedDefaults={suggestedDefaults}
         />
         {result && (
           <FrequencyResponsePlots

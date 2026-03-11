@@ -79,6 +79,7 @@ export default function FilterApp() {
             onNumPolesChange={custom.setNumPoles}
             result={custom.result}
             running={custom.running}
+            error={custom.error}
             onRun={custom.run}
           />
         )}

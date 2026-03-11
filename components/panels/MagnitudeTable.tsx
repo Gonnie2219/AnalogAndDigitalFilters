@@ -71,8 +71,9 @@ export default function MagnitudeTable({ targets, onChange }: MagnitudeTableProp
                 <input
                   type="number"
                   value={t.magnitude}
-                  onChange={(e) => updateRow(i, "magnitude", parseFloat(e.target.value) || 0)}
+                  onChange={(e) => updateRow(i, "magnitude", Math.max(0, parseFloat(e.target.value) || 0))}
                   step={0.1}
+                  min={0}
                   className="w-full px-1 py-0.5 rounded border border-[var(--border)] bg-[var(--bg)] text-[var(--text)]"
                 />
               </td>

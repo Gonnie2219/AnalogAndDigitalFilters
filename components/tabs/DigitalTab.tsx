@@ -11,9 +11,11 @@ import {
 import { digitalTfToLatex } from "@/lib/utils/formatLatex";
 import { radToHz, hzToRad } from "@/lib/utils/units";
 import PoleZeroMap from "@/components/panels/PoleZeroMap";
+import TimeResponsePlots from "@/components/panels/TimeResponsePlots";
 import AxisControls, { AxisRanges, SuggestedDefaults } from "@/components/panels/AxisControls";
 import NumberInput from "@/components/ui/NumberInput";
 import Plot from "@/components/plot/PlotlyWrapper";
+import { autoTimeParams, computeTimeResponse } from "@/lib/filters/timeResponse";
 import "katex/dist/katex.min.css";
 import katex from "katex";
 
@@ -96,6 +98,14 @@ export default function DigitalTab({
   const cCode = useMemo(() => {
     if (!result) return "";
     return generateCCode(result.dtf.b, result.dtf.a, fs);
+  }, [result, fs]);
+
+  const timeResp = useMemo(() => {
+    if (!result) return null;
+    try {
+      const { nSamples } = autoTimeParams(result.dtf.poles, true, fs);
+      return computeTimeResponse(result.dtf.b, result.dtf.a, fs, nSamples);
+    } catch { return null; }
   }, [result, fs]);
 
   const handleCopyHz = () => {
@@ -315,6 +325,10 @@ export default function DigitalTab({
               />
             </div>
           </div>
+        )}
+
+        {result && timeResp && (
+          <TimeResponsePlots time={timeResp.time} impulse={timeResp.impulse} step={timeResp.step} dark={dark} digital />
         )}
 
         {/* Arduino/C code block */}

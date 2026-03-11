@@ -2,11 +2,14 @@
 import MagnitudeTable from "@/components/panels/MagnitudeTable";
 import TransferFunctionDisplay from "@/components/panels/TransferFunctionDisplay";
 import FrequencyResponsePlots from "@/components/panels/FrequencyResponsePlots";
+import TimeResponsePlots from "@/components/panels/TimeResponsePlots";
 import PoleZeroMap from "@/components/panels/PoleZeroMap";
 import NumberInput from "@/components/ui/NumberInput";
 import AxisControls, { AxisRanges, SuggestedDefaults } from "@/components/panels/AxisControls";
 import { MagnitudeTarget, CustomFitResult } from "@/lib/optimization/customFit";
 import { radToHz } from "@/lib/utils/units";
+import { bilinearTransform } from "@/lib/filters/bilinear";
+import { autoTimeParams, computeTimeResponse } from "@/lib/filters/timeResponse";
 import { useMemo, useState } from "react";
 
 interface CustomTabProps {
@@ -33,6 +36,18 @@ export default function CustomTab({
   const [useHz, setUseHz] = useState(true);
   const [magDb, setMagDb] = useState(true);
   const [ranges, setRanges] = useState<AxisRanges>(defaultRanges);
+
+  const timeResp = useMemo(() => {
+    if (!result) return null;
+    try {
+      const { fs, nSamples } = autoTimeParams(result.tf.poles, false);
+      const maxPoleMag = Math.max(
+        ...result.tf.poles.map((p) => Math.sqrt(p.re * p.re + p.im * p.im)), 1
+      );
+      const dtf = bilinearTransform(result.tf, fs, maxPoleMag);
+      return computeTimeResponse(dtf.b, dtf.a, fs, nSamples);
+    } catch { return null; }
+  }, [result]);
 
   const suggestedDefaults = useMemo<SuggestedDefaults>(() => {
     if (targets.length === 0) return {};
@@ -95,6 +110,9 @@ export default function CustomTab({
             response={result.response} dark={dark}
             useHz={useHz} magDb={magDb} ranges={ranges}
           />
+        )}
+        {result && timeResp && (
+          <TimeResponsePlots time={timeResp.time} impulse={timeResp.impulse} step={timeResp.step} dark={dark} />
         )}
         {!result && (
           <div className="flex items-center justify-center h-64 text-[var(--text-secondary)]">

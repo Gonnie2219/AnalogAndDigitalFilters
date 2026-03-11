@@ -3,10 +3,13 @@ import { FilterSpec, FilterResult } from "@/lib/filters/types";
 import FilterSpecPanel from "@/components/panels/FilterSpecPanel";
 import TransferFunctionDisplay from "@/components/panels/TransferFunctionDisplay";
 import FrequencyResponsePlots from "@/components/panels/FrequencyResponsePlots";
+import TimeResponsePlots from "@/components/panels/TimeResponsePlots";
 import PoleZeroMap from "@/components/panels/PoleZeroMap";
 import SummaryCard from "@/components/panels/SummaryCard";
 import AxisControls, { AxisRanges, SuggestedDefaults } from "@/components/panels/AxisControls";
 import { radToHz } from "@/lib/utils/units";
+import { bilinearTransform } from "@/lib/filters/bilinear";
+import { autoTimeParams, computeTimeResponse } from "@/lib/filters/timeResponse";
 import { useMemo, useState } from "react";
 
 interface StandardTabProps {
@@ -27,6 +30,15 @@ export default function StandardTab({ spec, result, onChange, onReset, dark }: S
   const [useHz, setUseHz] = useState(true);
   const [magDb, setMagDb] = useState(true);
   const [ranges, setRanges] = useState<AxisRanges>(defaultRanges);
+
+  const timeResp = useMemo(() => {
+    if (!result) return null;
+    try {
+      const { fs, nSamples } = autoTimeParams(result.tf.poles, false);
+      const dtf = bilinearTransform(result.tf, fs, spec.cutoffFreq);
+      return computeTimeResponse(dtf.b, dtf.a, fs, nSamples);
+    } catch { return null; }
+  }, [result, spec.cutoffFreq]);
 
   const suggestedDefaults = useMemo<SuggestedDefaults>(() => {
     const fc = useHz ? radToHz(spec.cutoffFreq) : spec.cutoffFreq;
@@ -57,6 +69,9 @@ export default function StandardTab({ spec, result, onChange, onReset, dark }: S
         <AxisControls useHz={useHz} onToggleHz={() => setUseHz(!useHz)} magDb={magDb} onToggleMagDb={() => setMagDb(!magDb)} ranges={ranges} onRangeChange={setRanges} suggestedDefaults={suggestedDefaults} />
         {result && (
           <FrequencyResponsePlots response={result.response} dark={dark} useHz={useHz} magDb={magDb} ranges={ranges} />
+        )}
+        {result && timeResp && (
+          <TimeResponsePlots time={timeResp.time} impulse={timeResp.impulse} step={timeResp.step} dark={dark} />
         )}
         {!result && (
           <div className="flex items-center justify-center h-64 text-[var(--text-secondary)]">

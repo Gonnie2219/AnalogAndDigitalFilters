@@ -74,20 +74,21 @@ export function bilinearTransform(
   return { zeros: digitalZeros, poles: digitalPoles, gain: Kd, b, a, fs };
 }
 
-/** Evaluate digital frequency response H(e^{jw}) for w = 0 to just below pi */
+/** Evaluate digital frequency response H(e^{jw}) for w = 0 to wMax.
+ *  wMax defaults to 0.98*pi (just below Nyquist); pass higher values
+ *  (e.g. 4*pi) to show periodic repetition of H(z). */
 export function computeDigitalResponse(
   b: number[],
   a: number[],
   fs: number,
-  nPoints: number = 512
+  nPoints: number = 512,
+  wMax: number = 0.98 * Math.PI
 ): DigitalFrequencyResponse {
   const omega: number[] = [];
   const frequencies: number[] = [];
   const magnitude: number[] = [];
   const magnitudeDb: number[] = [];
   const phase: number[] = [];
-
-  const wMax = 0.98 * Math.PI; // stop before Nyquist to avoid numerical artifacts
   for (let i = 0; i < nPoints; i++) {
     const w = (wMax * i) / (nPoints - 1);
     omega.push(w);

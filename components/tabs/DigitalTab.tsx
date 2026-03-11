@@ -66,13 +66,17 @@ export default function DigitalTab({
     if (prewarpRad <= 0 || prewarpHz >= fs / 2) return null;
     try {
       const dtf = bilinearTransform(analogTf, fs, prewarpRad);
-      const response = computeDigitalResponse(dtf.b, dtf.a, fs);
+      const response = computeDigitalResponse(
+        dtf.b, dtf.a, fs,
+        useHz ? 512 : 1024,
+        useHz ? 0.98 * Math.PI : 2 * 2 * Math.PI
+      );
       return { dtf, response };
     } catch (e) {
       console.error("Bilinear transform error:", e);
       return null;
     }
-  }, [analogTf, fs, prewarpHz]);
+  }, [analogTf, fs, prewarpHz, useHz]);
 
   // LaTeX rendering
   const tfHtml = useMemo(() => {
@@ -131,15 +135,15 @@ export default function DigitalTab({
   const freqs = result
     ? useHz
       ? result.response.frequencies
-      : result.response.omega
+      : result.response.omega.map(w => w * fs)  // rad/sample → rad/s
     : [];
   const freqLabel = useHz
     ? "Frequency (Hz)"
-    : "\u03c9 (rad/sample)";
+    : "\u03c9 (rad/s)";
 
-  const nyquist = useHz ? fs / 2 : Math.PI;
-  // Actual sweep goes to 0.98*pi — match default axis range to sweep extent
-  const sweepMax = useHz ? (0.98 * fs) / 2 : 0.98 * Math.PI;
+  const nyquist = useHz ? fs / 2 : 2 * 2 * Math.PI * fs;
+  // Actual sweep extent for default axis range
+  const sweepMax = useHz ? (0.98 * fs) / 2 : 0.98 * 2 * 2 * Math.PI * fs;
   const userFreqRange = parseRange(ranges.freqMin, ranges.freqMax);
   const magRange = parseRange(ranges.magMin, ranges.magMax);
   const phaseRange = parseRange(ranges.phaseMin, ranges.phaseMax);
@@ -258,6 +262,7 @@ export default function DigitalTab({
                     gridcolor: gridColor,
                     linecolor: gridColor,
                     ...(freqRange && { range: freqRange }),
+                    ...(!useHz && { tickformat: "~s" }),
                   },
                   yaxis: {
                     title: {
@@ -296,6 +301,7 @@ export default function DigitalTab({
                     gridcolor: gridColor,
                     linecolor: gridColor,
                     ...(freqRange && { range: freqRange }),
+                    ...(!useHz && { tickformat: "~s" }),
                   },
                   yaxis: {
                     title: { text: "Phase (degrees)" },

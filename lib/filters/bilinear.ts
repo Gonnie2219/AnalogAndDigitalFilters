@@ -87,9 +87,9 @@ export function computeDigitalResponse(
   const magnitudeDb: number[] = [];
   const phase: number[] = [];
 
+  const wMax = 0.98 * Math.PI; // stop before Nyquist to avoid numerical artifacts
   for (let i = 0; i < nPoints; i++) {
-    // Exclude w=pi exactly to avoid numerical artifacts at z=-1
-    const w = (Math.PI * i) / nPoints;
+    const w = (wMax * i) / (nPoints - 1);
     omega.push(w);
     frequencies.push((w * fs) / (2 * Math.PI));
 

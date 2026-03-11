@@ -16,10 +16,18 @@ interface AxisControlsProps {
   onToggleMagDb: () => void;
   ranges: AxisRanges;
   onRangeChange: (ranges: AxisRanges) => void;
+  maxFreq?: number; // optional upper bound for frequency inputs
 }
 
-export default function AxisControls({ useHz, onToggleHz, magDb, onToggleMagDb, ranges, onRangeChange }: AxisControlsProps) {
+export default function AxisControls({ useHz, onToggleHz, magDb, onToggleMagDb, ranges, onRangeChange, maxFreq }: AxisControlsProps) {
   const update = (field: keyof AxisRanges, value: string) => {
+    // Clamp frequency fields to maxFreq if provided
+    if (maxFreq !== undefined && (field === "freqMin" || field === "freqMax")) {
+      const num = parseFloat(value);
+      if (!isNaN(num) && num > maxFreq) {
+        value = String(maxFreq);
+      }
+    }
     onRangeChange({ ...ranges, [field]: value });
   };
 
@@ -86,6 +94,8 @@ export default function AxisControls({ useHz, onToggleHz, magDb, onToggleMagDb, 
               value={ranges.freqMin}
               onChange={(e) => update("freqMin", e.target.value)}
               placeholder="auto"
+              min={0}
+              {...(maxFreq !== undefined && { max: maxFreq })}
               className="w-full px-1.5 py-1 text-xs rounded border border-[var(--border)] bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
             />
             <span className="text-[10px] text-[var(--text-secondary)]">-</span>
@@ -94,6 +104,8 @@ export default function AxisControls({ useHz, onToggleHz, magDb, onToggleMagDb, 
               value={ranges.freqMax}
               onChange={(e) => update("freqMax", e.target.value)}
               placeholder="auto"
+              min={0}
+              {...(maxFreq !== undefined && { max: maxFreq })}
               className="w-full px-1.5 py-1 text-xs rounded border border-[var(--border)] bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
             />
           </div>

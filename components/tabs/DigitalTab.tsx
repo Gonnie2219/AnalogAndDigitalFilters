@@ -138,13 +138,15 @@ export default function DigitalTab({
     : "\u03c9 (rad/sample)";
 
   const nyquist = useHz ? fs / 2 : Math.PI;
+  // Actual sweep goes to 0.98*pi — match default axis range to sweep extent
+  const sweepMax = useHz ? (0.98 * fs) / 2 : 0.98 * Math.PI;
   const userFreqRange = parseRange(ranges.freqMin, ranges.freqMax);
   const magRange = parseRange(ranges.magMin, ranges.magMax);
   const phaseRange = parseRange(ranges.phaseMin, ranges.phaseMax);
   // Clamp frequency range to [0, Nyquist] — digital response is only unique in this band
   const freqRange: [number, number] = userFreqRange
     ? [Math.max(0, Math.min(userFreqRange[0], nyquist)), Math.min(userFreqRange[1], nyquist)]
-    : [0, nyquist];
+    : [0, sweepMax];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 p-4">
@@ -220,6 +222,7 @@ export default function DigitalTab({
           onToggleMagDb={() => setMagDb(!magDb)}
           ranges={ranges}
           onRangeChange={setRanges}
+          maxFreq={nyquist}
         />
 
         {/* Frequency response plots */}

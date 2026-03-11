@@ -1,6 +1,7 @@
 "use client";
 import Plot from "@/components/plot/PlotlyWrapper";
 import { FrequencyResponse } from "@/lib/filters/types";
+import { computeGroupDelay } from "@/lib/filters/response";
 import { radToHz } from "@/lib/utils/units";
 import { AxisRanges } from "./AxisControls";
 
@@ -59,6 +60,10 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
   const textColor = dark ? "#e2e8f0" : "#374151";
   const lineColor = dark ? "#60a5fa" : "#2563eb";
   const phaseColor = dark ? "#f472b6" : "#ec4899";
+  const gdColor = dark ? "#34d399" : "#10b981";
+
+  // Group delay: differentiate with respect to rad/s (always), display in seconds
+  const groupDelay = computeGroupDelay(response.phase, response.frequencies);
 
   const freqs = useHz
     ? response.frequencies.map(radToHz)
@@ -149,6 +154,33 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
           }}
           config={{ responsive: true, displayModeBar: false }}
           style={{ width: "100%", height: "220px" }}
+        />
+      </div>
+
+      <div className="rounded-lg bg-[var(--panel)] border border-[var(--border)] overflow-hidden">
+        <Plot
+          data={[
+            {
+              x: freqs,
+              y: groupDelay,
+              type: "scatter" as const,
+              mode: "lines" as const,
+              line: { color: gdColor, width: 2 },
+              name: "Group Delay",
+            },
+          ]}
+          layout={{
+            ...commonLayout,
+            height: 200,
+            yaxis: {
+              title: { text: "Group Delay (s)" },
+              gridcolor: gridColor,
+              linecolor: gridColor,
+              tickformat: "~s",
+            },
+          }}
+          config={{ responsive: true, displayModeBar: false }}
+          style={{ width: "100%", height: "200px" }}
         />
       </div>
     </div>

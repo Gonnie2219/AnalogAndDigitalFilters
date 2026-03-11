@@ -9,6 +9,7 @@ import {
   DigitalFrequencyResponse,
 } from "@/lib/filters/bilinear";
 import { digitalTfToLatex } from "@/lib/utils/formatLatex";
+import { computeGroupDelay } from "@/lib/filters/response";
 import { radToHz, hzToRad } from "@/lib/utils/units";
 import PoleZeroMap from "@/components/panels/PoleZeroMap";
 import TimeResponsePlots from "@/components/panels/TimeResponsePlots";
@@ -140,6 +141,12 @@ export default function DigitalTab({
   const textColor = dark ? "#e2e8f0" : "#374151";
   const lineColor = dark ? "#60a5fa" : "#2563eb";
   const phaseColor = dark ? "#f472b6" : "#ec4899";
+  const gdColor = dark ? "#34d399" : "#10b981";
+
+  // Group delay: differentiate in rad/sample, convert to seconds
+  const groupDelay = result
+    ? computeGroupDelay(result.response.phase, result.response.omega).map(gd => gd / fs)
+    : [];
 
   // Frequency axis data
   const freqs = result
@@ -322,6 +329,43 @@ export default function DigitalTab({
                 }}
                 config={{ responsive: true, displayModeBar: false }}
                 style={{ width: "100%", height: "220px" }}
+              />
+            </div>
+
+            <div className="rounded-lg bg-[var(--panel)] border border-[var(--border)] overflow-hidden">
+              <Plot
+                data={[
+                  {
+                    x: freqs,
+                    y: groupDelay,
+                    type: "scatter" as const,
+                    mode: "lines" as const,
+                    line: { color: gdColor, width: 2 },
+                    name: "Group Delay",
+                  },
+                ]}
+                layout={{
+                  height: 200,
+                  paper_bgcolor: bgColor,
+                  plot_bgcolor: bgColor,
+                  font: { color: textColor, size: 12 },
+                  margin: { l: 60, r: 20, t: 10, b: 40 },
+                  xaxis: {
+                    title: { text: freqLabel },
+                    gridcolor: gridColor,
+                    linecolor: gridColor,
+                    ...(freqRange && { range: freqRange }),
+                    ...(!useHz && { tickformat: "~s" }),
+                  },
+                  yaxis: {
+                    title: { text: "Group Delay (s)" },
+                    gridcolor: gridColor,
+                    linecolor: gridColor,
+                    tickformat: "~s",
+                  },
+                }}
+                config={{ responsive: true, displayModeBar: false }}
+                style={{ width: "100%", height: "200px" }}
               />
             </div>
           </div>

@@ -44,3 +44,31 @@ function unwrapPhase(phase: number[]): void {
     phase[i] = phase[i - 1] + diff;
   }
 }
+
+/** Compute group delay from unwrapped phase via central differences.
+ *  tau(w) = -d(phase)/d(omega), phase in degrees, omega in rad/s or rad/sample.
+ *  Result is in seconds (analog) or samples (digital). */
+export function computeGroupDelay(
+  phase: number[],
+  frequencies: number[]
+): number[] {
+  const n = phase.length;
+  const gd: number[] = new Array(n);
+  const degToRad = Math.PI / 180;
+
+  for (let i = 0; i < n; i++) {
+    let dPhase: number, dOmega: number;
+    if (i === 0) {
+      dPhase = (phase[1] - phase[0]) * degToRad;
+      dOmega = frequencies[1] - frequencies[0];
+    } else if (i === n - 1) {
+      dPhase = (phase[n - 1] - phase[n - 2]) * degToRad;
+      dOmega = frequencies[n - 1] - frequencies[n - 2];
+    } else {
+      dPhase = (phase[i + 1] - phase[i - 1]) * degToRad;
+      dOmega = frequencies[i + 1] - frequencies[i - 1];
+    }
+    gd[i] = dOmega !== 0 ? -dPhase / dOmega : 0;
+  }
+  return gd;
+}

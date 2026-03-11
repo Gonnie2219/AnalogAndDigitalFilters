@@ -83,7 +83,7 @@ export default function FilterApp() {
             onRun={custom.run}
           />
         )}
-        {activeTab === 2 && <CircuitTab tf={activeTf} />}
+        {activeTab === 2 && <CircuitTab tf={activeTf} responseType={spec.responseType} />}
         {activeTab === 3 && (
           <DigitalTab
             analogTf={activeTf}

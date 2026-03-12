@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { TransferFunction } from "@/lib/filters/types";
 import {
   bilinearTransform,
@@ -13,7 +13,7 @@ import { computeGroupDelay } from "@/lib/filters/response";
 import { radToHz, hzToRad } from "@/lib/utils/units";
 import PoleZeroMap from "@/components/panels/PoleZeroMap";
 import TimeResponsePlots from "@/components/panels/TimeResponsePlots";
-import AxisControls, { AxisRanges, SuggestedDefaults } from "@/components/panels/AxisControls";
+import AxisControls, { AxisRanges } from "@/components/panels/AxisControls";
 import NumberInput from "@/components/ui/NumberInput";
 import Plot from "@/components/plot/PlotlyWrapper";
 import { autoTimeParams, computeTimeResponse } from "@/lib/filters/timeResponse";
@@ -52,40 +52,50 @@ export default function DigitalTab({
 }: DigitalTabProps) {
   const [fs, setFs] = useState(44100);
   const [prewarpHz, setPrewarpHz] = useState(() => radToHz(defaultPrewarp));
+  const prevPrewarp = useRef(defaultPrewarp);
+
+  // Sync prewarpHz when the analog source changes (e.g. switching Standard ↔ Custom)
+  useEffect(() => {
+    if (defaultPrewarp !== prevPrewarp.current) {
+      prevPrewarp.current = defaultPrewarp;
+      setPrewarpHz(radToHz(defaultPrewarp));
+    }
+  }, [defaultPrewarp]);
+
   const [useHz, setUseHz] = useState(true);
   const [magDb, setMagDb] = useState(true);
   const [ranges, setRanges] = useState<AxisRanges>(defaultRanges);
   const [copiedHz, setCopiedHz] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  // Recompute when analog TF or settings change
-  const result = useMemo<{
-    dtf: DigitalTransferFunction;
-    response: DigitalFrequencyResponse;
-  } | null>(() => {
+  // Bilinear transform (independent of display units)
+  const dtf = useMemo<DigitalTransferFunction | null>(() => {
     if (!analogTf) return null;
     const prewarpRad = hzToRad(prewarpHz);
-    // Prewarp frequency must be below Nyquist
     if (prewarpRad <= 0 || prewarpHz >= fs / 2) return null;
     try {
-      const dtf = bilinearTransform(analogTf, fs, prewarpRad);
-      const response = computeDigitalResponse(
-        dtf.b, dtf.a, fs,
-        useHz ? 512 : 1024,
-        useHz ? 0.98 * Math.PI : 2 * 2 * Math.PI
-      );
-      return { dtf, response };
+      return bilinearTransform(analogTf, fs, prewarpRad);
     } catch (e) {
       console.error("Bilinear transform error:", e);
       return null;
     }
-  }, [analogTf, fs, prewarpHz, useHz]);
+  }, [analogTf, fs, prewarpHz]);
+
+  // Frequency response sweep (depends on display unit for sweep range)
+  const response = useMemo<DigitalFrequencyResponse | null>(() => {
+    if (!dtf) return null;
+    return computeDigitalResponse(
+      dtf.b, dtf.a, fs,
+      useHz ? 512 : 1024,
+      useHz ? 0.98 * Math.PI : 4 * Math.PI
+    );
+  }, [dtf, fs, useHz]);
 
   // LaTeX rendering
   const tfHtml = useMemo(() => {
-    if (!result) return "";
+    if (!dtf) return "";
     try {
-      const latex = digitalTfToLatex(result.dtf.b, result.dtf.a);
+      const latex = digitalTfToLatex(dtf.b, dtf.a);
       return katex.renderToString(latex, {
         displayMode: true,
         throwOnError: false,
@@ -93,26 +103,26 @@ export default function DigitalTab({
     } catch {
       return "<span>Error rendering transfer function</span>";
     }
-  }, [result]);
+  }, [dtf]);
 
   // C code
   const cCode = useMemo(() => {
-    if (!result) return "";
-    return generateCCode(result.dtf.b, result.dtf.a, fs);
-  }, [result, fs]);
+    if (!dtf) return "";
+    return generateCCode(dtf.b, dtf.a, fs);
+  }, [dtf, fs]);
 
   const timeResp = useMemo(() => {
-    if (!result) return null;
+    if (!dtf) return null;
     try {
-      const { nSamples } = autoTimeParams(result.dtf.poles, true, fs);
-      return computeTimeResponse(result.dtf.b, result.dtf.a, fs, nSamples);
+      const { nSamples } = autoTimeParams(dtf.poles, true, fs);
+      return computeTimeResponse(dtf.b, dtf.a, fs, nSamples);
     } catch { return null; }
-  }, [result, fs]);
+  }, [dtf, fs]);
 
   const handleCopyHz = () => {
-    if (!result) return;
-    const bStr = result.dtf.b.map((v) => v.toPrecision(8)).join(", ");
-    const aStr = result.dtf.a.map((v) => v.toPrecision(8)).join(", ");
+    if (!dtf) return;
+    const bStr = dtf.b.map((v) => v.toPrecision(8)).join(", ");
+    const aStr = dtf.a.map((v) => v.toPrecision(8)).join(", ");
     const text = `b = [${bStr}];\na = [${aStr}];`;
     navigator.clipboard.writeText(text).then(() => {
       setCopiedHz(true);
@@ -144,30 +154,29 @@ export default function DigitalTab({
   const gdColor = dark ? "#34d399" : "#10b981";
 
   // Group delay: differentiate in rad/sample, convert to seconds
-  const groupDelay = result
-    ? computeGroupDelay(result.response.phase, result.response.omega).map(gd => gd / fs)
+  const groupDelay = response
+    ? computeGroupDelay(response.phase, response.omega).map(gd => gd / fs)
     : [];
 
   // Frequency axis data
-  const freqs = result
+  const freqs = response
     ? useHz
-      ? result.response.frequencies
-      : result.response.omega.map(w => w * fs)  // rad/sample → rad/s
+      ? response.frequencies
+      : response.omega.map(w => w * fs)  // rad/sample → rad/s
     : [];
   const freqLabel = useHz
     ? "Frequency (Hz)"
     : "\u03c9 (rad/s)";
 
-  const nyquist = useHz ? fs / 2 : 2 * 2 * Math.PI * fs;
-  // Actual sweep extent for default axis range
-  const sweepMax = useHz ? (0.98 * fs) / 2 : 0.98 * 2 * 2 * Math.PI * fs;
+  // In Hz mode: sweep to Nyquist. In rad/s mode: sweep covers 2 periods (4π·fs) to show periodicity.
+  const sweepExtent = useHz ? fs / 2 : 4 * Math.PI * fs;
+  const sweepDefault = useHz ? 0.98 * fs / 2 : 0.98 * 4 * Math.PI * fs;
   const userFreqRange = parseRange(ranges.freqMin, ranges.freqMax);
   const magRange = parseRange(ranges.magMin, ranges.magMax);
   const phaseRange = parseRange(ranges.phaseMin, ranges.phaseMax);
-  // Clamp frequency range to [0, Nyquist] — digital response is only unique in this band
   const freqRange: [number, number] = userFreqRange
-    ? [Math.max(0, Math.min(userFreqRange[0], nyquist)), Math.min(userFreqRange[1], nyquist)]
-    : [0, sweepMax];
+    ? [Math.max(0, Math.min(userFreqRange[0], sweepExtent)), Math.min(userFreqRange[1], sweepExtent)]
+    : [0, sweepDefault];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 p-4">
@@ -203,10 +212,10 @@ export default function DigitalTab({
           )}
         </div>
 
-        {result && (
+        {dtf && (
           <PoleZeroMap
-            poles={result.dtf.poles}
-            zeros={result.dtf.zeros}
+            poles={dtf.poles}
+            zeros={dtf.zeros}
             dark={dark}
           />
         )}
@@ -215,7 +224,7 @@ export default function DigitalTab({
       {/* Main content */}
       <div className="space-y-4">
         {/* Transfer function display */}
-        {result && (
+        {dtf && (
           <div className="p-4 rounded-lg bg-[var(--panel)] border border-[var(--border)] overflow-x-auto">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-[var(--text)]">
@@ -243,16 +252,16 @@ export default function DigitalTab({
           onToggleMagDb={() => setMagDb(!magDb)}
           ranges={ranges}
           onRangeChange={setRanges}
-          maxFreq={nyquist}
+          maxFreq={sweepExtent}
           suggestedDefaults={{
-            freqMin: 0, freqMax: nyquist,
+            freqMin: 0, freqMax: sweepExtent,
             magMin: magDb ? -100 : 0, magMax: magDb ? 5 : 1.5,
             phaseMin: -270, phaseMax: 0,
           }}
         />
 
         {/* Frequency response plots */}
-        {result && (
+        {response && (
           <div className="space-y-2">
             <div className="rounded-lg bg-[var(--panel)] border border-[var(--border)] overflow-hidden">
               <Plot
@@ -260,8 +269,8 @@ export default function DigitalTab({
                   {
                     x: freqs,
                     y: magDb
-                      ? result.response.magnitudeDb
-                      : result.response.magnitude,
+                      ? response.magnitudeDb
+                      : response.magnitude,
                     type: "scatter" as const,
                     mode: "lines" as const,
                     line: { color: lineColor, width: 2 },
@@ -300,7 +309,7 @@ export default function DigitalTab({
                 data={[
                   {
                     x: freqs,
-                    y: result.response.phase,
+                    y: response.phase,
                     type: "scatter" as const,
                     mode: "lines" as const,
                     line: { color: phaseColor, width: 2 },
@@ -371,12 +380,12 @@ export default function DigitalTab({
           </div>
         )}
 
-        {result && timeResp && (
+        {dtf && timeResp && (
           <TimeResponsePlots time={timeResp.time} impulse={timeResp.impulse} step={timeResp.step} dark={dark} digital />
         )}
 
         {/* Arduino/C code block */}
-        {result && (
+        {dtf && (
           <div className="rounded-lg bg-[var(--panel)] border border-[var(--border)] overflow-hidden">
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
               <h3 className="text-sm font-semibold text-[var(--text)]">
@@ -395,7 +404,7 @@ export default function DigitalTab({
           </div>
         )}
 
-        {!result && analogTf && (
+        {!dtf && analogTf && (
           <div className="flex items-center justify-center h-64 text-[var(--text-secondary)]">
             Adjust sampling and prewarp frequencies above
           </div>

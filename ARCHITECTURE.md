@@ -28,7 +28,7 @@ components/
   panels/
     FilterSpecPanel.tsx       # Filter type/order/cutoff inputs
     TransferFunctionDisplay.tsx  # KaTeX H(s) display
-    FrequencyResponsePlots.tsx   # Magnitude + Phase Plotly plots
+    FrequencyResponsePlots.tsx   # Magnitude + Phase + Group Delay Plotly plots (optional target point markers)
     PoleZeroMap.tsx           # s-plane pole/zero scatter plot
     MagnitudeTable.tsx        # Custom freq/mag target table
     SummaryCard.tsx           # Key filter specs card
@@ -93,10 +93,14 @@ hooks/
    - Nelder-Mead minimizes weighted magnitude error
 3. Returns `CustomFitResult` with fitted transfer function + response
 
-### Circuit Tab
-1. Takes active `TransferFunction` (from Standard or Custom tab)
-2. `factorize(tf)` splits into 1st/2nd order sections
-3. Each section computes component values (RC or Sallen-Key)
+### Circuit Tabs (Std Circuit / Custom Circuit)
+Two separate circuit tabs, each dedicated to one design source:
+- **Std Circuit** (tab 2): wired to Standard tab's `result.tf` + `spec.responseType`
+- **Custom Circuit** (tab 3): wired to Custom tab's `custom.result.tf`, shows local lowpass/highpass topology toggle
+
+Both render the same `CircuitTab` component with different props:
+1. `factorize(tf, responseType)` splits into 1st/2nd order sections
+2. Each section computes component values (RC or Sallen-Key)
 
 ### Digital Tab
 1. Takes active analog `TransferFunction` + estimated prewarp frequency

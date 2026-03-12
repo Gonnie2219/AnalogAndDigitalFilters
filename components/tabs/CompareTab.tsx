@@ -4,6 +4,7 @@ import { FilterSpec, FilterResult } from "@/lib/filters/types";
 import { designFilter } from "@/lib/filters/design";
 import FilterSpecPanel from "@/components/panels/FilterSpecPanel";
 import FrequencyResponsePlots from "@/components/panels/FrequencyResponsePlots";
+import PoleZeroMap from "@/components/panels/PoleZeroMap";
 import AxisControls, { AxisRanges, SuggestedDefaults } from "@/components/panels/AxisControls";
 import { radToHz } from "@/lib/utils/units";
 
@@ -131,6 +132,19 @@ export default function CompareTab({ dark }: CompareTabProps) {
         <div className="flex items-center justify-center h-64 text-[var(--text-secondary)]">
           Error computing both filters. Check parameters.
         </div>
+      )}
+
+      {/* Overlaid pole-zero map */}
+      {resultA && (
+        <PoleZeroMap
+          poles={resultA.tf.poles}
+          zeros={resultA.tf.zeros}
+          dark={dark}
+          comparePoles={resultB?.tf.poles}
+          compareZeros={resultB?.tf.zeros}
+          primaryLabel={labelA}
+          compareLabel={labelB}
+        />
       )}
     </div>
   );

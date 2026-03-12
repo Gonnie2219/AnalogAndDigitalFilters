@@ -6,27 +6,34 @@ interface PoleZeroMapProps {
   poles: Complex[];
   zeros: Complex[];
   dark: boolean;
+  comparePoles?: Complex[];
+  compareZeros?: Complex[];
+  primaryLabel?: string;
+  compareLabel?: string;
 }
 
 function isValid(p: Complex): boolean {
   return isFinite(p.re) && isFinite(p.im);
 }
 
-export default function PoleZeroMap({ poles, zeros, dark }: PoleZeroMapProps) {
+export default function PoleZeroMap({ poles, zeros, dark, comparePoles, compareZeros, primaryLabel, compareLabel }: PoleZeroMapProps) {
   const bgColor = dark ? "#1e293b" : "#ffffff";
   const gridColor = dark ? "#334155" : "#e5e7eb";
   const textColor = dark ? "#e2e8f0" : "#374151";
 
   const validPoles = poles.filter(isValid);
   const validZeros = zeros.filter(isValid);
+  const validCmpPoles = comparePoles?.filter(isValid) ?? [];
+  const validCmpZeros = compareZeros?.filter(isValid) ?? [];
+  const isComparing = !!comparePoles || !!compareZeros;
 
   // Unit circle
   const theta = Array.from({ length: 100 }, (_, i) => (i / 99) * 2 * Math.PI);
   const unitCircleX = theta.map(Math.cos);
   const unitCircleY = theta.map(Math.sin);
 
-  // Compute axis range
-  const allPoints = [...validPoles, ...validZeros];
+  // Compute axis range (include compare points)
+  const allPoints = [...validPoles, ...validZeros, ...validCmpPoles, ...validCmpZeros];
   const maxAbs = Math.max(
     2,
     ...allPoints.map((p) => Math.max(Math.abs(p.re), Math.abs(p.im)) * 1.3)
@@ -68,6 +75,34 @@ export default function PoleZeroMap({ poles, zeros, dark }: PoleZeroMapProps) {
     });
   }
 
+  // Compare filter traces (orange)
+  const cmpPoleColor = dark ? "#fb923c" : "#ea580c";
+  const cmpZeroColor = dark ? "#fbbf24" : "#d97706";
+
+  if (validCmpPoles.length > 0) {
+    traces.push({
+      x: validCmpPoles.map((p) => p.re),
+      y: validCmpPoles.map((p) => p.im),
+      type: "scatter" as const,
+      mode: "markers" as const,
+      marker: { symbol: "x", size: 10, color: cmpPoleColor, line: { width: 2 } },
+      name: `${compareLabel || "B"} Poles`,
+      showlegend: false,
+    });
+  }
+
+  if (validCmpZeros.length > 0) {
+    traces.push({
+      x: validCmpZeros.map((z) => z.re),
+      y: validCmpZeros.map((z) => z.im),
+      type: "scatter" as const,
+      mode: "markers" as const,
+      marker: { symbol: "circle-open", size: 10, color: cmpZeroColor, line: { width: 2 } },
+      name: `${compareLabel || "B"} Zeros`,
+      showlegend: false,
+    });
+  }
+
   return (
     <div className="rounded-lg bg-[var(--panel)] border border-[var(--border)] overflow-hidden">
       <h3 className="text-sm font-semibold text-[var(--text)] px-4 pt-3">Pole-Zero Map</h3>
@@ -102,7 +137,8 @@ export default function PoleZeroMap({ poles, zeros, dark }: PoleZeroMapProps) {
         style={{ width: "100%", height: "300px" }}
       />
       {/* HTML legend — avoids Plotly's in-plot legend marker being mistaken for data */}
-      <div className="flex items-center gap-4 px-4 pb-2 text-xs text-[var(--text-secondary)]">
+      <div className="flex items-center gap-4 px-4 pb-2 text-xs text-[var(--text-secondary)] flex-wrap">
+        {isComparing && <span className="font-semibold">{primaryLabel || "A"}:</span>}
         <span className="flex items-center gap-1">
           <svg width="12" height="12"><line x1="2" y1="2" x2="10" y2="10" stroke={dark ? "#f87171" : "#dc2626"} strokeWidth="2" /><line x1="10" y1="2" x2="2" y2="10" stroke={dark ? "#f87171" : "#dc2626"} strokeWidth="2" /></svg>
           Poles ({validPoles.length})
@@ -112,6 +148,21 @@ export default function PoleZeroMap({ poles, zeros, dark }: PoleZeroMapProps) {
             <svg width="12" height="12"><circle cx="6" cy="6" r="4" fill="none" stroke={dark ? "#60a5fa" : "#2563eb"} strokeWidth="2" /></svg>
             Zeros ({validZeros.length})
           </span>
+        )}
+        {isComparing && (
+          <>
+            <span className="font-semibold ml-2">{compareLabel || "B"}:</span>
+            <span className="flex items-center gap-1">
+              <svg width="12" height="12"><line x1="2" y1="2" x2="10" y2="10" stroke={cmpPoleColor} strokeWidth="2" /><line x1="10" y1="2" x2="2" y2="10" stroke={cmpPoleColor} strokeWidth="2" /></svg>
+              Poles ({validCmpPoles.length})
+            </span>
+            {validCmpZeros.length > 0 && (
+              <span className="flex items-center gap-1">
+                <svg width="12" height="12"><circle cx="6" cy="6" r="4" fill="none" stroke={cmpZeroColor} strokeWidth="2" /></svg>
+                Zeros ({validCmpZeros.length})
+              </span>
+            )}
+          </>
         )}
       </div>
     </div>

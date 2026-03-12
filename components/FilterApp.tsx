@@ -100,6 +100,7 @@ export default function FilterApp() {
             analogTf={activeTf}
             defaultPrewarp={prewarpFreq}
             dark={dark}
+            sourceLabel={lastDesignTab.current === 1 && custom.result ? "Custom" : "Standard"}
           />
         )}
         {activeTab === 5 && (

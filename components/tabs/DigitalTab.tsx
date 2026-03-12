@@ -25,6 +25,7 @@ interface DigitalTabProps {
   analogTf: TransferFunction | null;
   defaultPrewarp: number; // rad/s
   dark: boolean;
+  sourceLabel?: string;
 }
 
 const defaultRanges: AxisRanges = {
@@ -50,6 +51,7 @@ export default function DigitalTab({
   analogTf,
   defaultPrewarp,
   dark,
+  sourceLabel,
 }: DigitalTabProps) {
   const [fs, setFs] = useState(44100);
   const [prewarpHz, setPrewarpHz] = useState(() => radToHz(defaultPrewarp));
@@ -187,6 +189,11 @@ export default function DigitalTab({
           <h3 className="text-sm font-semibold text-[var(--text)]">
             Digital Settings
           </h3>
+          {sourceLabel && (
+            <p className="text-xs text-[var(--text-secondary)]">
+              Source: <span className="font-semibold text-[var(--accent)]">{sourceLabel}</span> filter
+            </p>
+          )}
           <NumberInput
             label="Sampling Frequency (Hz)"
             value={fs}

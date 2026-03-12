@@ -106,7 +106,7 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
     paper_bgcolor: bgColor,
     plot_bgcolor: bgColor,
     font: { color: textColor, size: 12 },
-    margin: { l: 60, r: 20, t: 10, b: 40 },
+    margin: { l: 60, r: 20, t: isComparing ? 30 : 10, b: 40 },
     showlegend: isComparing,
     legend: isComparing ? { x: 0, y: 1.15, orientation: "h" as const, font: { size: 11 } } : undefined,
     xaxis: {

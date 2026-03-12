@@ -24,6 +24,7 @@ components/
     CustomTab.tsx             # Custom magnitude specification UI
     CircuitTab.tsx            # Circuit implementation UI
     DigitalTab.tsx            # Digital filter (bilinear transform) UI
+    CompareTab.tsx            # A vs B filter comparison with overlaid plots
   panels/
     FilterSpecPanel.tsx       # Filter type/order/cutoff inputs
     TransferFunctionDisplay.tsx  # KaTeX H(s) display
@@ -106,6 +107,13 @@ hooks/
    - Normalizes gain to match DC
 4. `computeDigitalResponse(b, a, fs)` evaluates H(e^{jw}) for w = 0..pi
 5. `generateCCode(b, a, fs)` produces Direct Form II Transposed implementation
+
+### Compare Tab
+1. Self-contained — manages its own two `FilterSpec` states (A and B)
+2. Each spec calls `designFilter()` via `useMemo` independently
+3. `FrequencyResponsePlots` renders both responses overlaid (blue vs orange traces)
+4. `PoleZeroMap` renders both filters' poles/zeros overlaid with color-coded legend
+5. Shared `AxisControls` for Hz/dB toggles and axis ranges
 
 ## Key Design Decisions
 - **State management**: React state in FilterApp + prop drilling. No Redux needed.

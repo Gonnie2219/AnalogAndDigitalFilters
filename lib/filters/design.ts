@@ -39,9 +39,10 @@ export function designFilter(spec: FilterSpec): FilterResult {
     denominator,
   };
 
-  // 4. Compute frequency response
+  // 4. Compute frequency response (use both cutoffs for BP/BS range)
+  const maxCutoff = Math.max(spec.cutoffFreq, spec.cutoffFreq2 ?? spec.cutoffFreq);
   const fMin = spec.cutoffFreq / 100;
-  const fMax = spec.cutoffFreq * 100;
+  const fMax = maxCutoff * 100;
   const frequencies = logspace(fMin, fMax, 500);
   const response = computeResponse(zeros, poles, gain, frequencies);
 

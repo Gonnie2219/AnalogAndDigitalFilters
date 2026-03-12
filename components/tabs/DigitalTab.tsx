@@ -17,6 +17,7 @@ import AxisControls, { AxisRanges } from "@/components/panels/AxisControls";
 import NumberInput from "@/components/ui/NumberInput";
 import Plot from "@/components/plot/PlotlyWrapper";
 import { autoTimeParams, computeTimeResponse } from "@/lib/filters/timeResponse";
+import ArduinoGuide from "@/components/panels/ArduinoGuide";
 import "katex/dist/katex.min.css";
 import katex from "katex";
 
@@ -403,6 +404,8 @@ export default function DigitalTab({
             </pre>
           </div>
         )}
+
+        {dtf && <ArduinoGuide fs={fs} />}
 
         {!dtf && analogTf && (
           <div className="flex items-center justify-center h-64 text-[var(--text-secondary)]">

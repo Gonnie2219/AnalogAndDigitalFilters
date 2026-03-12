@@ -33,6 +33,7 @@ components/
     MagnitudeTable.tsx        # Custom freq/mag target table
     SummaryCard.tsx           # Key filter specs card
     AxisControls.tsx          # Hz/rad toggle
+    ArduinoGuide.tsx         # Arduino wiring, components, and AD2 verification guide
   circuit/
     RCCircuit.tsx             # 1st order RC SVG diagram
     SallenKeyCircuit.tsx      # 2nd order Sallen-Key SVG diagram

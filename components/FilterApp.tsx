@@ -12,7 +12,7 @@ import { useCustomOptimization } from "@/hooks/useCustomOptimization";
 import { useTheme } from "@/hooks/useTheme";
 import { TransferFunction, FrequencyResponse } from "@/lib/filters/types";
 
-const TABS = ["Standard", "Custom", "Circuit", "Digital", "Compare"];
+const TABS = ["Standard", "Custom", "Std Circuit", "Custom Circuit", "Digital", "Compare"];
 
 /** Estimate -3dB cutoff from a frequency response (rad/s) */
 function estimateCutoff(response: FrequencyResponse, fallback: number): number {
@@ -86,18 +86,23 @@ export default function FilterApp() {
         )}
         {activeTab === 2 && (
           <CircuitTab
-            tf={activeTf}
-            responseType={lastDesignTab.current === 1 ? undefined : spec.responseType}
+            tf={result?.tf ?? null}
+            responseType={spec.responseType}
           />
         )}
         {activeTab === 3 && (
+          <CircuitTab
+            tf={custom.result?.tf ?? null}
+          />
+        )}
+        {activeTab === 4 && (
           <DigitalTab
             analogTf={activeTf}
             defaultPrewarp={prewarpFreq}
             dark={dark}
           />
         )}
-        {activeTab === 4 && (
+        {activeTab === 5 && (
           <CompareTab dark={dark} />
         )}
       </main>

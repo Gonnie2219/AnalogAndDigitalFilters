@@ -11,6 +11,9 @@ interface FrequencyResponsePlotsProps {
   useHz: boolean;
   magDb: boolean;
   ranges: AxisRanges;
+  compareResponse?: FrequencyResponse;
+  compareLabel?: string;
+  primaryLabel?: string;
 }
 
 function parseRange(min: string, max: string): [number, number] | undefined {
@@ -54,13 +57,18 @@ function generateLogTicks(minVal: number, maxVal: number): { tickvals: number[];
   return { tickvals, ticktext };
 }
 
-export default function FrequencyResponsePlots({ response, dark, useHz, magDb, ranges }: FrequencyResponsePlotsProps) {
+export default function FrequencyResponsePlots({ response, dark, useHz, magDb, ranges, compareResponse, compareLabel, primaryLabel }: FrequencyResponsePlotsProps) {
   const bgColor = dark ? "#1e293b" : "#ffffff";
   const gridColor = dark ? "#334155" : "#e5e7eb";
   const textColor = dark ? "#e2e8f0" : "#374151";
   const lineColor = dark ? "#60a5fa" : "#2563eb";
   const phaseColor = dark ? "#f472b6" : "#ec4899";
   const gdColor = dark ? "#34d399" : "#10b981";
+
+  // Compare trace colors (orange)
+  const compareLineColor = dark ? "#fb923c" : "#ea580c";
+  const comparePhaseColor = dark ? "#fbbf24" : "#d97706";
+  const compareGdColor = dark ? "#a78bfa" : "#7c3aed";
 
   // Group delay: differentiate with respect to rad/s (always), display in seconds
   const groupDelay = computeGroupDelay(response.phase, response.frequencies);
@@ -69,6 +77,14 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
     ? response.frequencies.map(radToHz)
     : response.frequencies;
   const freqLabel = useHz ? "Frequency (Hz)" : "Frequency (rad/s)";
+
+  // Compare data
+  const cmpFreqs = compareResponse
+    ? (useHz ? compareResponse.frequencies.map(radToHz) : compareResponse.frequencies)
+    : null;
+  const cmpGroupDelay = compareResponse
+    ? computeGroupDelay(compareResponse.phase, compareResponse.frequencies)
+    : null;
 
   const freqRange = parseRange(ranges.freqMin, ranges.freqMax);
   const magRange = parseRange(ranges.magMin, ranges.magMax);
@@ -84,11 +100,15 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
   const tickMax = freqRange ? freqRange[1] : freqs[freqs.length - 1];
   const { tickvals, ticktext } = generateLogTicks(tickMin, tickMax);
 
+  const isComparing = !!compareResponse;
+
   const commonLayout = {
     paper_bgcolor: bgColor,
     plot_bgcolor: bgColor,
     font: { color: textColor, size: 12 },
     margin: { l: 60, r: 20, t: 10, b: 40 },
+    showlegend: isComparing,
+    legend: isComparing ? { x: 0, y: 1.15, orientation: "h" as const, font: { size: 11 } } : undefined,
     xaxis: {
       type: "log" as const,
       tickmode: "array" as const,
@@ -112,8 +132,16 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
               type: "scatter" as const,
               mode: "lines" as const,
               line: { color: lineColor, width: 2 },
-              name: "Magnitude",
+              name: primaryLabel || "Magnitude",
             },
+            ...(compareResponse && cmpFreqs ? [{
+              x: cmpFreqs,
+              y: magDb ? compareResponse.magnitudeDb : compareResponse.magnitude,
+              type: "scatter" as const,
+              mode: "lines" as const,
+              line: { color: compareLineColor, width: 2 },
+              name: compareLabel || "Compare",
+            }] : []),
           ]}
           layout={{
             ...commonLayout,
@@ -139,8 +167,16 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
               type: "scatter" as const,
               mode: "lines" as const,
               line: { color: phaseColor, width: 2 },
-              name: "Phase",
+              name: primaryLabel || "Phase",
             },
+            ...(compareResponse && cmpFreqs ? [{
+              x: cmpFreqs,
+              y: compareResponse.phase,
+              type: "scatter" as const,
+              mode: "lines" as const,
+              line: { color: comparePhaseColor, width: 2 },
+              name: compareLabel || "Compare",
+            }] : []),
           ]}
           layout={{
             ...commonLayout,
@@ -166,8 +202,16 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
               type: "scatter" as const,
               mode: "lines" as const,
               line: { color: gdColor, width: 2 },
-              name: "Group Delay",
+              name: primaryLabel || "Group Delay",
             },
+            ...(compareResponse && cmpFreqs && cmpGroupDelay ? [{
+              x: cmpFreqs,
+              y: cmpGroupDelay,
+              type: "scatter" as const,
+              mode: "lines" as const,
+              line: { color: compareGdColor, width: 2 },
+              name: compareLabel || "Compare",
+            }] : []),
           ]}
           layout={{
             ...commonLayout,

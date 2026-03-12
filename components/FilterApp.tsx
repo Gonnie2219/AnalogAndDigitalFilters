@@ -6,12 +6,13 @@ import StandardTab from "@/components/tabs/StandardTab";
 import CustomTab from "@/components/tabs/CustomTab";
 import CircuitTab from "@/components/tabs/CircuitTab";
 import DigitalTab from "@/components/tabs/DigitalTab";
+import CompareTab from "@/components/tabs/CompareTab";
 import { useFilterDesign } from "@/hooks/useFilterDesign";
 import { useCustomOptimization } from "@/hooks/useCustomOptimization";
 import { useTheme } from "@/hooks/useTheme";
 import { TransferFunction, FrequencyResponse } from "@/lib/filters/types";
 
-const TABS = ["Standard", "Custom", "Circuit", "Digital"];
+const TABS = ["Standard", "Custom", "Circuit", "Digital", "Compare"];
 
 /** Estimate -3dB cutoff from a frequency response (rad/s) */
 function estimateCutoff(response: FrequencyResponse, fallback: number): number {
@@ -95,6 +96,9 @@ export default function FilterApp() {
             defaultPrewarp={prewarpFreq}
             dark={dark}
           />
+        )}
+        {activeTab === 4 && (
+          <CompareTab dark={dark} />
         )}
       </main>
     </div>

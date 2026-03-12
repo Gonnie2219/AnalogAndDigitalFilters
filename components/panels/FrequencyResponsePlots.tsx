@@ -5,6 +5,11 @@ import { computeGroupDelay } from "@/lib/filters/response";
 import { radToHz } from "@/lib/utils/units";
 import { AxisRanges } from "./AxisControls";
 
+interface TargetPoint {
+  frequency: number;  // rad/s
+  magnitude: number;  // linear
+}
+
 interface FrequencyResponsePlotsProps {
   response: FrequencyResponse;
   dark: boolean;
@@ -14,6 +19,7 @@ interface FrequencyResponsePlotsProps {
   compareResponse?: FrequencyResponse;
   compareLabel?: string;
   primaryLabel?: string;
+  targetPoints?: TargetPoint[];
 }
 
 function parseRange(min: string, max: string): [number, number] | undefined {
@@ -57,7 +63,7 @@ function generateLogTicks(minVal: number, maxVal: number): { tickvals: number[];
   return { tickvals, ticktext };
 }
 
-export default function FrequencyResponsePlots({ response, dark, useHz, magDb, ranges, compareResponse, compareLabel, primaryLabel }: FrequencyResponsePlotsProps) {
+export default function FrequencyResponsePlots({ response, dark, useHz, magDb, ranges, compareResponse, compareLabel, primaryLabel, targetPoints }: FrequencyResponsePlotsProps) {
   const bgColor = dark ? "#1e293b" : "#ffffff";
   const gridColor = dark ? "#334155" : "#e5e7eb";
   const textColor = dark ? "#e2e8f0" : "#374151";
@@ -105,14 +111,16 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
   const { tickvals, ticktext } = generateLogTicks(tickMin, tickMax);
 
   const isComparing = !!compareResponse;
+  const hasTargets = !!targetPoints && targetPoints.length > 0;
+  const showLegend = isComparing || hasTargets;
 
   const commonLayout = {
     paper_bgcolor: bgColor,
     plot_bgcolor: bgColor,
     font: { color: textColor, size: 12 },
-    margin: { l: 60, r: 20, t: isComparing ? 30 : 10, b: 40 },
-    showlegend: isComparing,
-    legend: isComparing ? { x: 0, y: 1.15, orientation: "h" as const, font: { size: 11 } } : undefined,
+    margin: { l: 60, r: 20, t: showLegend ? 30 : 10, b: 40 },
+    showlegend: showLegend,
+    legend: showLegend ? { x: 0, y: 1.15, orientation: "h" as const, font: { size: 11 } } : undefined,
     xaxis: {
       type: "log" as const,
       tickmode: "array" as const,
@@ -145,6 +153,14 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
               mode: "lines" as const,
               line: { color: compareLineColor, width: 2 },
               name: compareLabel || "Compare",
+            }] : []),
+            ...(hasTargets ? [{
+              x: targetPoints!.map(tp => useHz ? radToHz(tp.frequency) : tp.frequency),
+              y: targetPoints!.map(tp => magDb ? 20 * Math.log10(tp.magnitude) : tp.magnitude),
+              type: "scatter" as const,
+              mode: "markers" as const,
+              marker: { symbol: "circle-open", size: 10, color: dark ? "#facc15" : "#ca8a04", line: { width: 2 } },
+              name: "Targets",
             }] : []),
           ]}
           layout={{

@@ -109,6 +109,7 @@ export default function CustomTab({
           <FrequencyResponsePlots
             response={result.response} dark={dark}
             useHz={useHz} magDb={magDb} ranges={ranges}
+            targetPoints={targets.map(t => ({ frequency: t.frequency, magnitude: t.magnitude }))}
           />
         )}
         {result && timeResp && (

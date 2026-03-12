@@ -95,9 +95,13 @@ export default function FrequencyResponsePlots({ response, dark, useHz, magDb, r
     ? [Math.log10(Math.max(freqRange[0], 1e-6)), Math.log10(freqRange[1])]
     : undefined;
 
-  // Generate SI-prefixed tick labels covering the visible range
-  const tickMin = freqRange ? freqRange[0] : freqs[0];
-  const tickMax = freqRange ? freqRange[1] : freqs[freqs.length - 1];
+  // Generate SI-prefixed tick labels covering the visible range (including compare data)
+  let tickMin = freqRange ? freqRange[0] : freqs[0];
+  let tickMax = freqRange ? freqRange[1] : freqs[freqs.length - 1];
+  if (!freqRange && cmpFreqs) {
+    tickMin = Math.min(tickMin, cmpFreqs[0]);
+    tickMax = Math.max(tickMax, cmpFreqs[cmpFreqs.length - 1]);
+  }
   const { tickvals, ticktext } = generateLogTicks(tickMin, tickMax);
 
   const isComparing = !!compareResponse;

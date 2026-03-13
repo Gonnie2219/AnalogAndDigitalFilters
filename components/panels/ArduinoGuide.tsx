@@ -51,18 +51,19 @@ export default function ArduinoGuide({ fs }: ArduinoGuideProps) {
                 The Arduino ADC reads 0&ndash;5V. To handle AC signals (centered at 0V), bias the input to 2.5V with a voltage divider and use a coupling capacitor to block DC from the source.
               </p>
               <pre className="text-[10px] leading-relaxed font-mono bg-[var(--bg-secondary)] rounded p-2 overflow-x-auto">
-{`Signal ──┤├── 1μF ──┬── A0
+{`                    5V
                      │
                  10kΩ ┤
                      │
-                    5V
-
+Signal ──┤├── 1μF ──┬── A0
+                     │
                  10kΩ ┤
                      │
                     GND`}
               </pre>
               <p className="mt-1">
-                The two 10k&Omega; resistors form a divider that sets the DC bias at 2.5V.
+                The two 10k&Omega; resistors form a series voltage divider between 5V and GND,
+                setting a 2.5V DC bias at the midpoint (A0).
                 The 1&mu;F cap passes the AC signal while blocking any DC offset from the source.
               </p>
             </div>

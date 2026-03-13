@@ -7,6 +7,7 @@ import PoleZeroMap from "@/components/panels/PoleZeroMap";
 import NumberInput from "@/components/ui/NumberInput";
 import AxisControls, { AxisRanges, SuggestedDefaults } from "@/components/panels/AxisControls";
 import { MagnitudeTarget, CustomFitResult } from "@/lib/optimization/customFit";
+import { ResponseType } from "@/lib/filters/types";
 import { radToHz } from "@/lib/utils/units";
 import { bilinearTransform } from "@/lib/filters/bilinear";
 import { autoTimeParams, computeTimeResponse } from "@/lib/filters/timeResponse";
@@ -18,6 +19,8 @@ interface CustomTabProps {
   onTargetsChange: (targets: MagnitudeTarget[]) => void;
   numPoles: number;
   onNumPolesChange: (n: number) => void;
+  responseType: ResponseType;
+  onResponseTypeChange: (t: ResponseType) => void;
   result: CustomFitResult | null;
   running: boolean;
   error: string | null;
@@ -31,7 +34,7 @@ const defaultRanges: AxisRanges = {
 };
 
 export default function CustomTab({
-  dark, targets, onTargetsChange, numPoles, onNumPolesChange, result, running, error, onRun,
+  dark, targets, onTargetsChange, numPoles, onNumPolesChange, responseType, onResponseTypeChange, result, running, error, onRun,
 }: CustomTabProps) {
   const [useHz, setUseHz] = useState(true);
   const [magDb, setMagDb] = useState(true);
@@ -69,6 +72,19 @@ export default function CustomTab({
       <div className="space-y-4">
         <MagnitudeTable targets={targets} onChange={onTargetsChange} />
         <div className="p-4 rounded-lg bg-[var(--panel)] border border-[var(--border)] space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">Response Type</label>
+            <select
+              value={responseType}
+              onChange={(e) => onResponseTypeChange(e.target.value as ResponseType)}
+              className="w-full px-2 py-1.5 rounded border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text)] text-sm"
+            >
+              <option value="lowpass">Low-Pass</option>
+              <option value="highpass">High-Pass</option>
+              <option value="bandpass">Band-Pass</option>
+              <option value="bandstop">Band-Stop</option>
+            </select>
+          </div>
           <NumberInput
             label="Number of Poles"
             value={numPoles}

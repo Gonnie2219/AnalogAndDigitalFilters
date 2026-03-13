@@ -78,6 +78,8 @@ export default function FilterApp() {
             onTargetsChange={custom.setTargets}
             numPoles={custom.numPoles}
             onNumPolesChange={custom.setNumPoles}
+            responseType={custom.responseType}
+            onResponseTypeChange={custom.setResponseType}
             result={custom.result}
             running={custom.running}
             error={custom.error}
@@ -93,6 +95,7 @@ export default function FilterApp() {
         {activeTab === 3 && (
           <CircuitTab
             tf={custom.result?.tf ?? null}
+            responseType={custom.responseType}
           />
         )}
         {activeTab === 4 && (

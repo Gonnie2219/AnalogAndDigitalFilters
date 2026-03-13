@@ -1,6 +1,7 @@
 "use client";
 import { useState, useCallback, useRef } from "react";
 import { MagnitudeTarget, CustomFitResult, customFit } from "@/lib/optimization/customFit";
+import { ResponseType } from "@/lib/filters/types";
 import { hzToRad } from "@/lib/utils/units";
 
 const defaultTargets: MagnitudeTarget[] = [
@@ -12,6 +13,7 @@ const defaultTargets: MagnitudeTarget[] = [
 export function useCustomOptimization() {
   const [targets, setTargets] = useState<MagnitudeTarget[]>(defaultTargets);
   const [numPoles, setNumPoles] = useState(4);
+  const [responseType, setResponseType] = useState<ResponseType>("lowpass");
   const [result, setResult] = useState<CustomFitResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export function useCustomOptimization() {
     // Run async to not block UI
     setTimeout(() => {
       try {
-        const res = customFit(targets, numPoles);
+        const res = customFit(targets, numPoles, responseType);
         setResult(res);
       } catch (e) {
         console.error("Optimization error:", e);
@@ -35,7 +37,7 @@ export function useCustomOptimization() {
       setRunning(false);
       runningRef.current = false;
     }, 10);
-  }, [targets, numPoles]);
+  }, [targets, numPoles, responseType]);
 
-  return { targets, setTargets, numPoles, setNumPoles, result, running, error, run };
+  return { targets, setTargets, numPoles, setNumPoles, responseType, setResponseType, result, running, error, run };
 }

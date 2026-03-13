@@ -1,4 +1,4 @@
-import { Complex, TransferFunction, FrequencyResponse } from "../filters/types";
+import { Complex, TransferFunction, FrequencyResponse, ResponseType } from "../filters/types";
 import { nelderMead } from "./nelderMead";
 import { computeResponse, logspace } from "../filters/response";
 import { polyFromRoots } from "../filters/polynomial";
@@ -16,11 +16,55 @@ export interface CustomFitResult {
   error: number;
 }
 
+/** Build zeros array based on filter response type */
+function buildZeros(responseType: ResponseType, numPoles: number, targets: MagnitudeTarget[]): Complex[] {
+  switch (responseType) {
+    case "lowpass":
+      return [];
+    case "highpass":
+      // n zeros at origin → numerator = s^n, forces H(0) = 0
+      return Array.from({ length: numPoles }, () => ({ re: 0, im: 0 }));
+    case "bandpass": {
+      // floor(n/2) zeros at origin → H(0) = 0 and H(∞) → 0
+      const nz = Math.floor(numPoles / 2);
+      return Array.from({ length: nz }, () => ({ re: 0, im: 0 }));
+    }
+    case "bandstop": {
+      // Conjugate zero pairs on imaginary axis at ±jω₀
+      // ω₀ = frequency of minimum-magnitude target
+      const minTarget = targets.reduce((a, b) => a.magnitude < b.magnitude ? a : b);
+      const w0 = minTarget.frequency;
+      const nzPairs = Math.floor(numPoles / 2);
+      const zeros: Complex[] = [];
+      for (let i = 0; i < nzPairs; i++) {
+        zeros.push({ re: 0, im: w0 });
+        zeros.push({ re: 0, im: -w0 });
+      }
+      return zeros;
+    }
+  }
+}
+
+/** Pick reference target for gain normalization */
+function pickRefTarget(targets: MagnitudeTarget[], responseType: ResponseType): MagnitudeTarget {
+  const sorted = [...targets].sort((a, b) => a.frequency - b.frequency);
+  switch (responseType) {
+    case "lowpass":
+      return sorted[0]; // lowest frequency
+    case "highpass":
+      return sorted[sorted.length - 1]; // highest frequency
+    case "bandpass":
+    case "bandstop":
+      return targets.reduce((a, b) => a.magnitude > b.magnitude ? a : b); // max magnitude
+  }
+}
+
 /** Fit a filter to custom magnitude targets.
  *  Parameterize poles as (-exp(x_i), y_i) to guarantee stability. */
 export function customFit(
   targets: MagnitudeTarget[],
-  numPoles: number
+  numPoles: number,
+  responseType: ResponseType = "lowpass"
 ): CustomFitResult {
   if (targets.length === 0) {
     // No targets — return a trivial unity transfer function
@@ -38,6 +82,9 @@ export function customFit(
   const nPairs = Math.floor(numPoles / 2);
   const hasReal = numPoles % 2 === 1;
   const nParams = nPairs * 2 + (hasReal ? 1 : 0);
+
+  const zeros = buildZeros(responseType, numPoles, targets);
+  const refTarget = pickRefTarget(targets, responseType);
 
   // Estimate cutoff frequency from targets for Butterworth initialization
   const sorted = [...targets].sort((a, b) => a.frequency - b.frequency);
@@ -97,19 +144,23 @@ export function customFit(
     return poles;
   }
 
-  // Normalize gain so H(0) matches the lowest-frequency target's magnitude
+  // Unified gain normalization: evaluate H at reference frequency with gain=1, then scale
+  function computeGain(poles: Complex[]): number {
+    const sRef: Complex = { re: 0, im: refTarget.frequency };
+    const H1 = evalTransferFunction(sRef, zeros, poles, 1);
+    const mag1 = cAbs(H1);
+    if (mag1 < 1e-30) return 1;
+    return refTarget.magnitude / mag1;
+  }
+
   function objective(params: number[]): number {
     const poles = paramsToPoles(params);
-    let prodPoleMag = 1;
-    for (const p of poles) {
-      prodPoleMag *= Math.sqrt(p.re * p.re + p.im * p.im);
-    }
-    const gain = dcMag * prodPoleMag; // H(0) = gain / prod(|p_i|) = dcMag
+    const gain = computeGain(poles);
 
     let totalError = 0;
     for (const t of targets) {
       const s: Complex = { re: 0, im: t.frequency };
-      const H = evalTransferFunction(s, [], poles, gain);
+      const H = evalTransferFunction(s, zeros, poles, gain);
       const mag = cAbs(H);
       const diff = mag - t.magnitude;
       totalError += t.weight * diff * diff;
@@ -119,13 +170,7 @@ export function customFit(
 
   const bestParams = nelderMead(objective, x0, { maxIter: 5000 });
   const poles = paramsToPoles(bestParams);
-  const zeros: Complex[] = [];
-
-  let prodPoleMag = 1;
-  for (const p of poles) {
-    prodPoleMag *= Math.sqrt(p.re * p.re + p.im * p.im);
-  }
-  const gain = Math.max(dcMag * prodPoleMag, 1e-20);
+  const gain = Math.max(computeGain(poles), 1e-20);
 
   const numerator = polyFromRoots(zeros);
   const denominator = polyFromRoots(poles);

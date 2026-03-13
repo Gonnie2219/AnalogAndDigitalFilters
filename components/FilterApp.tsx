@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import TabBar from "@/components/ui/TabBar";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import StandardTab from "@/components/tabs/StandardTab";
@@ -34,23 +34,25 @@ export default function FilterApp() {
   const { spec, result, updateSpec, resetSpec } = useFilterDesign();
   const custom = useCustomOptimization();
 
-  // Track which tab last produced a result for downstream tabs
-  const lastDesignTab = useRef<0 | 1>(0);
+  // Explicit source selector for the Digital tab
+  const [digitalSource, setDigitalSource] = useState<"standard" | "custom">("standard");
 
   const handleTabChange = (tab: number) => {
-    if (tab === 0 || tab === 1) lastDesignTab.current = tab as 0 | 1;
+    // Auto-switch digital source when visiting a design tab
+    if (tab === 0) setDigitalSource("standard");
+    if (tab === 1) setDigitalSource("custom");
     setActiveTab(tab);
   };
 
   // Active analog TF for Circuit and Digital tabs
   const activeTf: TransferFunction | null =
-    lastDesignTab.current === 1 && custom.result
+    digitalSource === "custom" && custom.result
       ? custom.result.tf
       : result?.tf ?? null;
 
   // Prewarp frequency for Digital tab (cutoff for Standard, estimated for Custom)
   const prewarpFreq: number =
-    lastDesignTab.current === 1 && custom.result
+    digitalSource === "custom" && custom.result
       ? estimateCutoff(custom.result.response, spec.cutoffFreq)
       : spec.cutoffFreq;
 
@@ -103,7 +105,10 @@ export default function FilterApp() {
             analogTf={activeTf}
             defaultPrewarp={prewarpFreq}
             dark={dark}
-            sourceLabel={lastDesignTab.current === 1 && custom.result ? "Custom" : "Standard"}
+            sourceLabel={digitalSource === "custom" && custom.result ? "Custom" : "Standard"}
+            onToggleSource={() => setDigitalSource(s => s === "standard" ? "custom" : "standard")}
+            hasStandardResult={!!result}
+            hasCustomResult={!!custom.result}
           />
         )}
         {activeTab === 5 && (

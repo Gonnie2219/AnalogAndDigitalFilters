@@ -26,6 +26,9 @@ interface DigitalTabProps {
   defaultPrewarp: number; // rad/s
   dark: boolean;
   sourceLabel?: string;
+  onToggleSource?: () => void;
+  hasStandardResult?: boolean;
+  hasCustomResult?: boolean;
 }
 
 const defaultRanges: AxisRanges = {
@@ -52,6 +55,9 @@ export default function DigitalTab({
   defaultPrewarp,
   dark,
   sourceLabel,
+  onToggleSource,
+  hasStandardResult,
+  hasCustomResult,
 }: DigitalTabProps) {
   const [fs, setFs] = useState(44100);
   const [prewarpHz, setPrewarpHz] = useState(() => radToHz(defaultPrewarp));
@@ -189,10 +195,17 @@ export default function DigitalTab({
           <h3 className="text-sm font-semibold text-[var(--text)]">
             Digital Settings
           </h3>
-          {sourceLabel && (
-            <p className="text-xs text-[var(--text-secondary)]">
-              Source: <span className="font-semibold text-[var(--accent)]">{sourceLabel}</span> filter
-            </p>
+          {sourceLabel && onToggleSource && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--text-secondary)]">Source:</span>
+              <button
+                onClick={onToggleSource}
+                disabled={sourceLabel === "Standard" ? !hasCustomResult : !hasStandardResult}
+                className="text-xs px-2 py-1 rounded border border-[var(--border)] font-semibold text-[var(--accent)] hover:border-[var(--accent)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {sourceLabel} &#x21C4;
+              </button>
+            </div>
           )}
           <NumberInput
             label="Sampling Frequency (Hz)"

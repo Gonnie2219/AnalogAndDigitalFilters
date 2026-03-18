@@ -34,6 +34,7 @@ components/
     SummaryCard.tsx           # Key filter specs card
     AxisControls.tsx          # Hz/rad toggle
     ArduinoGuide.tsx         # Arduino wiring, components, and AD2 verification guide
+    ESP32Guide.tsx           # ESP32 wiring, components, and AD2 verification guide
   circuit/
     RCCircuit.tsx             # 1st order RC SVG diagram
     SallenKeyCircuit.tsx      # 2nd order Sallen-Key SVG diagram
@@ -59,7 +60,7 @@ lib/
     transformations.ts        # LP -> HP/BP/BS frequency transformations
     response.ts               # H(jw) evaluation, logspace, phase unwrapping
     design.ts                 # Top-level orchestrator: spec -> FilterResult
-    bilinear.ts               # Bilinear transform: H(s) -> H(z), digital response, C code gen
+    bilinear.ts               # Bilinear transform: H(s) -> H(z), digital response, Arduino/ESP32 C code gen
   optimization/
     nelderMead.ts             # Nelder-Mead simplex optimizer
     customFit.ts              # Custom magnitude fitting (stability-guaranteed parameterization)
@@ -111,7 +112,7 @@ Both render the same `CircuitTab` component with different props:
    - Adds extra zeros at z=-1 for order difference
    - Normalizes gain to match DC
 4. `computeDigitalResponse(b, a, fs)` evaluates H(e^{jw}) for w = 0..pi
-5. `generateCCode(b, a, fs)` produces Direct Form II Transposed implementation
+5. `generateCCode(b, a, fs)` or `generateESP32Code(b, a, fs)` produces Direct Form II Transposed implementation (board-selectable)
 
 ### Compare Tab
 1. Self-contained — manages its own two `FilterSpec` states (A and B)

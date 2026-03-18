@@ -252,6 +252,99 @@ export function generateCCode(b: number[], a: number[], fs: number): string {
   return lines.join("\n");
 }
 
+/** Generate a complete ESP32 sketch with hardware timer, 12-bit ADC, and DAC output */
+export function generateESP32Code(b: number[], a: number[], fs: number): string {
+  const N = b.length - 1;
+  const timerTicks = Math.round(1000000 / fs);
+  const actualFs = 1000000 / timerTicks;
+  const fsError = Math.abs(actualFs - fs) / fs * 100;
+  const lines: string[] = [];
+
+  lines.push(`// =============================================================`);
+  lines.push(`// Digital Filter - ESP32 Sketch`);
+  lines.push(`// Direct Form II Transposed implementation`);
+  lines.push(`// Sampling frequency: ${fs} Hz (actual: ${actualFs.toFixed(1)} Hz)`);
+  lines.push(`// Filter order: ${N}`);
+  lines.push(`// =============================================================`);
+  if (fsError > 0.1) {
+    lines.push(`// NOTE: Timer resolution (1 us) cannot produce exactly ${fs} Hz.`);
+    lines.push(`//       Actual Fs = ${actualFs.toFixed(2)} Hz (${fsError.toFixed(2)}% error)`);
+  }
+  if (fs > 200000) {
+    lines.push(`//`);
+    lines.push(`// WARNING: Fs > 200 kHz may push ESP32 ADC/DAC limits.`);
+    lines.push(`//          Consider reducing Fs or using an external ADC.`);
+  }
+  lines.push(`// NOTE: ESP32 ADC has known nonlinearity near 0V and 3.3V.`);
+  lines.push(`//       For best accuracy, keep input signal between 0.1V - 3.2V.`);
+  lines.push(``);
+  lines.push(`#define FILTER_ORDER ${N}`);
+  lines.push(`#define ADC_PIN 34    // GPIO 34 (input-only, ADC1_CH6)`);
+  lines.push(`#define DAC_PIN 25    // GPIO 25 (built-in 8-bit DAC)`);
+  lines.push(``);
+
+  // Coefficients
+  lines.push(`// Filter coefficients`);
+  lines.push(`const float b[FILTER_ORDER + 1] = {${b.map(fmtCFloat).join(", ")}};`);
+  lines.push(`const float a[FILTER_ORDER + 1] = {${a.map(fmtCFloat).join(", ")}};`);
+  lines.push(``);
+  lines.push(`float w[FILTER_ORDER] = {0};  // state variables`);
+  lines.push(`volatile bool sampleReady = false;`);
+  lines.push(`hw_timer_t *timer = NULL;`);
+  lines.push(``);
+
+  // Filter function
+  lines.push(`// Direct Form II Transposed filter`);
+  lines.push(`float filter(float x) {`);
+  lines.push(`  float y = b[0] * x + w[0];`);
+  if (N > 1) {
+    lines.push(`  for (int i = 0; i < FILTER_ORDER - 1; i++) {`);
+    lines.push(`    w[i] = b[i + 1] * x - a[i + 1] * y + w[i + 1];`);
+    lines.push(`  }`);
+  }
+  lines.push(`  w[FILTER_ORDER - 1] = b[FILTER_ORDER] * x - a[FILTER_ORDER] * y;`);
+  lines.push(`  return y;`);
+  lines.push(`}`);
+  lines.push(``);
+
+  // Timer ISR
+  lines.push(`// Timer ISR - sets flag at Fs`);
+  lines.push(`void IRAM_ATTR onTimer() {`);
+  lines.push(`  sampleReady = true;`);
+  lines.push(`}`);
+  lines.push(``);
+
+  // setup()
+  lines.push(`void setup() {`);
+  lines.push(`  analogReadResolution(12);  // 12-bit ADC (0-4095)`);
+  lines.push(``);
+  lines.push(`  // Hardware timer: 1 MHz base, alarm every ${timerTicks} ticks -> ${actualFs.toFixed(1)} Hz`);
+  lines.push(`  timer = timerBegin(1000000);             // 1 MHz tick rate`);
+  lines.push(`  timerAttachInterrupt(timer, &onTimer);`);
+  lines.push(`  timerAlarm(timer, ${timerTicks}, true, 0);  // ${actualFs.toFixed(1)} Hz`);
+  lines.push(`}`);
+  lines.push(``);
+
+  // loop()
+  lines.push(`void loop() {`);
+  lines.push(`  if (sampleReady) {`);
+  lines.push(`    sampleReady = false;`);
+  lines.push(``);
+  lines.push(`    // Read 12-bit ADC and normalize to (-1.0, +1.0)`);
+  lines.push(`    float input = analogRead(ADC_PIN) / 2048.0f - 1.0f;`);
+  lines.push(``);
+  lines.push(`    // Apply filter`);
+  lines.push(`    float output = filter(input);`);
+  lines.push(``);
+  lines.push(`    // Write to built-in 8-bit DAC (0-255)`);
+  lines.push(`    int dacVal = constrain((int)((output + 1.0f) * 127.5f), 0, 255);`);
+  lines.push(`    dacWrite(DAC_PIN, dacVal);`);
+  lines.push(`  }`);
+  lines.push(`}`);
+
+  return lines.join("\n");
+}
+
 function fmtCFloat(v: number): string {
   if (Math.abs(v) < 1e-20) return "0.0f";
   // Use enough precision to maintain filter accuracy

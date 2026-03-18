@@ -5,6 +5,7 @@ import {
   bilinearTransform,
   computeDigitalResponse,
   generateCCode,
+  generateESP32Code,
   DigitalTransferFunction,
   DigitalFrequencyResponse,
 } from "@/lib/filters/bilinear";
@@ -18,6 +19,7 @@ import NumberInput from "@/components/ui/NumberInput";
 import Plot from "@/components/plot/PlotlyWrapper";
 import { autoTimeParams, computeTimeResponse } from "@/lib/filters/timeResponse";
 import ArduinoGuide from "@/components/panels/ArduinoGuide";
+import ESP32Guide from "@/components/panels/ESP32Guide";
 import "katex/dist/katex.min.css";
 import katex from "katex";
 
@@ -60,6 +62,7 @@ export default function DigitalTab({
   hasCustomResult,
 }: DigitalTabProps) {
   const [fs, setFs] = useState(44100);
+  const [board, setBoard] = useState<"uno" | "esp32">("uno");
   const [prewarpHz, setPrewarpHz] = useState(() => radToHz(defaultPrewarp));
   const prevPrewarp = useRef(defaultPrewarp);
 
@@ -117,8 +120,10 @@ export default function DigitalTab({
   // C code
   const cCode = useMemo(() => {
     if (!dtf) return "";
-    return generateCCode(dtf.b, dtf.a, fs);
-  }, [dtf, fs]);
+    return board === "esp32"
+      ? generateESP32Code(dtf.b, dtf.a, fs)
+      : generateCCode(dtf.b, dtf.a, fs);
+  }, [dtf, fs, board]);
 
   const timeResp = useMemo(() => {
     if (!dtf) return null;
@@ -207,6 +212,15 @@ export default function DigitalTab({
               </button>
             </div>
           )}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--text-secondary)]">Board:</span>
+            <button
+              onClick={() => setBoard(board === "uno" ? "esp32" : "uno")}
+              className="text-xs px-2 py-1 rounded border border-[var(--border)] font-semibold text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
+            >
+              {board === "uno" ? "Arduino Uno" : "ESP32"} &#x21C4;
+            </button>
+          </div>
           <NumberInput
             label="Sampling Frequency (Hz)"
             value={fs}
@@ -226,9 +240,14 @@ export default function DigitalTab({
               Prewarp frequency must be below Nyquist ({(fs / 2).toFixed(0)} Hz)
             </p>
           )}
-          {fs > 10000 && (
+          {board === "uno" && fs > 10000 && (
             <p className="text-xs text-yellow-500">
               Fs &gt; 10 kHz may be too fast for Arduino Uno (16 MHz). Consider Due, Teensy, or ESP32.
+            </p>
+          )}
+          {board === "esp32" && fs > 200000 && (
+            <p className="text-xs text-yellow-500">
+              Fs &gt; 200 kHz may push ESP32 ADC/DAC limits. Consider an external ADC.
             </p>
           )}
         </div>
@@ -410,7 +429,7 @@ export default function DigitalTab({
           <div className="rounded-lg bg-[var(--panel)] border border-[var(--border)] overflow-hidden">
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
               <h3 className="text-sm font-semibold text-[var(--text)]">
-                Arduino / C Implementation
+                {board === "esp32" ? "ESP32" : "Arduino"} / C Implementation
               </h3>
               <button
                 onClick={handleCopyCode}
@@ -425,7 +444,7 @@ export default function DigitalTab({
           </div>
         )}
 
-        {dtf && <ArduinoGuide fs={fs} />}
+        {dtf && (board === "esp32" ? <ESP32Guide fs={fs} /> : <ArduinoGuide fs={fs} />)}
 
         {!dtf && analogTf && (
           <div className="flex items-center justify-center h-64 text-[var(--text-secondary)]">
